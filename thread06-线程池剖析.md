@@ -260,7 +260,8 @@ private boolean addWorker(Runnable firstTask, boolean core) {
         for (;;) { // 5. 开启第二轮自旋（其实第一轮自旋就只是检测运行状态）
             int wc = workerCountOf(c); //   6. 获取线程数量
             if (wc >= CAPACITY ||
-                wc >= (core ? corePoolSize : maximumPoolSize)) //  7. 判断当前线程数量是否超出了最大容量限制或判断当前线程数量是否大于核心线程                                                            // 数或者最大线程数，具体判断是判断核心线程数还是最大线程数取决于调用时传入的core是否为true，如果超出了直接返回false
+                wc >= (core ? corePoolSize : maximumPoolSize)) //  7. 判断当前线程数量是否超出了最大容量限制或判断当前线程数量是否大于                                                            
+                // 核心线程数或者最大线程数，具体判断是判断核心线程数还是最大线程数取决于调用时传入的core是否为true，如果超出了直接返回false
                 return false;
             if (compareAndIncrementWorkerCount(c)) //   8. CAS增加当前线程数量，更改成功结束自旋
                 break retry;
@@ -283,7 +284,8 @@ private boolean addWorker(Runnable firstTask, boolean core) {
                 int rs = runStateOf(ctl.get()); // 15. 获取当前线程池运行状态
 
                 if (rs < SHUTDOWN ||
-                    (rs == SHUTDOWN && firstTask == null)) { // 16. 判断线程池是否在运行状态，否则判断是否是SHUTDOWN状态且传入的任务为空（有时           //是只启动一个工作线程）
+                    (rs == SHUTDOWN && firstTask == null)) { // 16. 判断线程池是否在运行状态，否则判断是否是SHUTDOWN状态且传入的任务为空           
+                    //（有时是只启动一个工作线程）
                     if (t.isAlive()) // 17. 判断线程是否是alive状态
                         throw new IllegalThreadStateException();
                     workers.add(w); // 18. 添加工作线程队列
@@ -346,11 +348,11 @@ final void runWorker(Worker w) {
         }
         completedAbruptly = false; // 13. 设置“猝死”标识为false没有被猝死233333
     } finally {
-        processWorkerExit(w, completedAbruptly); // 14. 调用processWorkerExit故名思意，其实其背后就是去删除了workers中的当前退出工作线程对象//和修改数量 
+        processWorkerExit(w, completedAbruptly); // 14. 调用processWorkerExit故名思意，
+        //其实其背后就是去删除了workers中的当前退出工作线程对象和修改数量 
     }
 }
 ```
-
 
 # 详解ThreadPoolExecutor中getTask()方法
 
@@ -371,10 +373,12 @@ private Runnable getTask() {
 
         int wc = workerCountOf(c);
 
-        boolean timed = allowCoreThreadTimeOut || wc > corePoolSize; // 2. 定时标志，首先判断是否允许核心线程超时(默认false)然后判断当前线程//池线程数量是否大于核心线程数
+        boolean timed = allowCoreThreadTimeOut || wc > corePoolSize; // 2. 定时标志，首先判断是否允许核心线程超时(默认false)
+        //然后判断当前线程池线程数量是否大于核心线程数
 
         if ((wc > maximumPoolSize || (timed && timedOut))
-            && (wc > 1 || workQueue.isEmpty())) { //  3. 判断当前线程池数是否超过了最大线程数 || 当前线程是否是定时并且已经超时 并且 线程数大于//1 或 任务队列为空
+            && (wc > 1 || workQueue.isEmpty())) { //  3. 判断当前线程池数是否超过了最大线程数 || 当前线程是否是定时并且已经超时 
+            //并且 线程数大于1 或 任务队列为空
             if (compareAndDecrementWorkerCount(c)) // 4. 线程数减1，返回null
                 return null;
             continue; // 5. 跳过本轮自旋
