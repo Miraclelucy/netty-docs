@@ -396,5 +396,6 @@ private Runnable getTask() {
 其实所谓的核心线程就是保持它启动后保证在核心线程数内的线程不会挂掉一直在自旋，但如果是设置了allowCoreThreadTimeOut标志为true的话那么就意义不大了
 
 ### 参考
-> https://mp.weixin.qq.com/s/mA59X7bOotyWwvf2V6zMIA?
+> https://mp.weixin.qq.com/s/mA59X7bOotyWwvf2V6zMIA
+
 > http://www.spring4all.com/article/1725
