@@ -218,36 +218,25 @@ public class ThreadPoolExecutor extends AbstractExecutorService {
 
 ```java
 public void execute(Runnable command) {
-    if (command == null) // 1
+    if (command == null) //  1 提交的任务如果是个空的则抛出NullPointerException
         throw new NullPointerException();
-    int c = ctl.get(); // 2
-    if (workerCountOf(c) < corePoolSize) { // 3
-        if (addWorker(command, true)) // 3.1
+    int c = ctl.get(); // 2 获取复合变量（记录了线程池状态和当前线程池线程数量）
+    if (workerCountOf(c) < corePoolSize) { // 3 判断当前线程池的线程数量是否在限定的核心线程数量的访问楼内
+        if (addWorker(command, true)) // 3.1 如果在那么就直接调用addWorker添加一个核心线程，然后return
             return;
-        c = ctl.get(); // 3.2
+        c = ctl.get(); // 3.2 添加失败，重新获取复合变量
     }
-    if (isRunning(c) && workQueue.offer(command)) { // 4
-        int recheck = ctl.get(); // 5
-        if (! isRunning(recheck) && remove(command)) //6
+    if (isRunning(c) && workQueue.offer(command)) { // 4 判断线程池是否是运行状态并且添加至阻塞等待队列中
+        int recheck = ctl.get(); // 5 重新获取状态（可能添加的过程中关闭过线程池之类的并发操作）
+        if (! isRunning(recheck) && remove(command)) //6 判断线程池是否是运行状态，如果不是将添加的任务删除并采取拒绝措施
             reject(command); 
-        else if (workerCountOf(recheck) == 0) // 7
+        else if (workerCountOf(recheck) == 0) // 7 判断线程池中的工作线程数量是否为0，如果为空则添加一个工作线程
             addWorker(null, false);
     }
-    else if (!addWorker(command, false)) //8
+    else if (!addWorker(command, false)) //8 队列添加失败，尝试调用addWorker以非核心线程的方式添加一条非核心线程执行，失败则采用饱和策略拒绝该任务
         reject(command);
 }
 ```
-接下来按照注释的序号对其一一解释
-  1. 提交的任务如果是个空的则抛出NullPointerException
-  2. 获取复合变量（记录了线程池状态和当前线程池线程数量）
-  3. 判断当前线程池的线程数量是否在限定的核心线程数量的访问楼内
-      a. 如果在那么就直接调用addWorker添加一个核心线程，然后return
-      b. 添加失败，重新获取复合变量
-  4. 判断线程池是否是运行状态并且添加至阻塞等待队列中
-  5. 重新获取状态（可能添加的过程中关闭过线程池之类的并发操作）
-  6. 判断线程池是否是运行状态，如果不是将添加的任务删除并采取拒绝措施
-  7. 判断线程池中的工作线程数量是否为0，如果为空则添加一个工作线程
-  8. 队列添加失败，尝试调用addWorker以非核心线程的方式添加一条非核心线程执行，失败则采用饱和策略拒绝该任务
 从上面的源码可以看到，如果核心线程数量未达到限定范围则会优先创建核心线程来执行该任务，否则将其加入阻塞等待队列中，如果添加至阻塞等待队列中失败后，则尝试创建一个非核心线程来执行该任务如果失败则采用饱和策略，该方法大量都与addWorker方法相关。
 
 
@@ -257,24 +246,26 @@ public void execute(Runnable command) {
 
 private boolean addWorker(Runnable firstTask, boolean core) {
     retry:
-    for (;;) { // 1
-        int c = ctl.get(); // 2
-        int rs = runStateOf(c); // 3
-        if (rs >= SHUTDOWN &&
-            ! (rs == SHUTDOWN &&
-               firstTask == null &&
-               ! workQueue.isEmpty())) // 4
+    for (;;) { //  1. 开始自旋
+        int c = ctl.get(); //  2. 获取复合状态
+        int rs = runStateOf(c); // 3. 拿到当前线程池运行状态
+        if (rs >= SHUTDOWN && // 4.1 当前线程池为STOP、TIDYING、TERMINATED
+            ! (rs == SHUTDOWN && //
+               firstTask == null && // 4.2 线程池处于SHUTDOWN时并且有第一个任务时
+               ! workQueue.isEmpty() // 4.3 当前线程池为SHUTDOWN时且任务队列为空时
+               )
+             ) // 4. 以上三种情况都会返回false   
             return false;
 
-        for (;;) { // 5
-            int wc = workerCountOf(c); // 6
+        for (;;) { // 5. 开启第二轮自旋（其实第一轮自旋就只是检测运行状态）
+            int wc = workerCountOf(c); //   6. 获取线程数量
             if (wc >= CAPACITY ||
-                wc >= (core ? corePoolSize : maximumPoolSize)) // 7
+                wc >= (core ? corePoolSize : maximumPoolSize)) //  7. 判断当前线程数量是否超出了最大容量限制或判断当前线程数量是否大于核心线程                                                            // 数或者最大线程数，具体判断是判断核心线程数还是最大线程数取决于调用时传入的core是否为true，如果超出了直接返回false
                 return false;
-            if (compareAndIncrementWorkerCount(c)) // 8
+            if (compareAndIncrementWorkerCount(c)) //   8. CAS增加当前线程数量，更改成功结束自旋
                 break retry;
-            c = ctl.get(); // 9
-            if (runStateOf(c) != rs) // 10
+            c = ctl.get(); //   9. 重新获取复合状态
+            if (runStateOf(c) != rs) //   10. 判断当前线程池状态是否还是运行中，如果不是则跳过第一层自旋的第一次自旋开始第二次
                 continue retry;
         }
     }
@@ -283,69 +274,39 @@ private boolean addWorker(Runnable firstTask, boolean core) {
     boolean workerAdded = false;
     Worker w = null;
     try {
-        w = new Worker(firstTask); // 11
-        final Thread t = w.thread; // 12
+        w = new Worker(firstTask); // 11. 创建工作线程
+        final Thread t = w.thread; // 12. 获取工作者中的线程对象
         if (t != null) {
-            final ReentrantLock mainLock = this.mainLock; // 13
-            mainLock.lock(); // 14 
+            final ReentrantLock mainLock = this.mainLock; //   13. 拿到锁变量
+            mainLock.lock(); // 14. 尝试获取锁（在操作队列时采取同步措施） 
             try {
-                int rs = runStateOf(ctl.get()); // 15
+                int rs = runStateOf(ctl.get()); // 15. 获取当前线程池运行状态
 
                 if (rs < SHUTDOWN ||
-                    (rs == SHUTDOWN && firstTask == null)) { // 16
-                    if (t.isAlive()) // 17
+                    (rs == SHUTDOWN && firstTask == null)) { // 16. 判断线程池是否在运行状态，否则判断是否是SHUTDOWN状态且传入的任务为空（有时           //是只启动一个工作线程）
+                    if (t.isAlive()) // 17. 判断线程是否是alive状态
                         throw new IllegalThreadStateException();
-                    workers.add(w); // 18
-                    int s = workers.size(); // 19
-                    if (s > largestPoolSize) // 20
+                    workers.add(w); // 18. 添加工作线程队列
+                    int s = workers.size(); // 19. 取当前工作线程队列的数量
+                    if (s > largestPoolSize) // 20. 判断是否大于最大线程数量，如果大于则赋值给它
                         largestPoolSize = s;
-                    workerAdded = true; // 21
+                    workerAdded = true; // 21. 设置当前工作者加入线程队列的已添加的标识为true
                 }
             } finally {
-                mainLock.unlock(); // 22
+                mainLock.unlock(); // 22. 释放锁
             }
-            if (workerAdded) {  // 23
+            if (workerAdded) {  // 23. 判断当前工作线程是否已经加入工作线程队列，如果以加入则启动该工作线程，并设置启动标识为true
                 t.start();
                 workerStarted = true;
             }
         }
     } finally {
-        if (! workerStarted) // 24
+        if (! workerStarted) // 24. 判断工作线程启动标识如果为false则调用addWorkerFailed
             addWorkerFailed(w);
     }
-    return workerStarted; // 25
+    return workerStarted; // 25. 返回启动标识来决定是否添加成功
 }
 ```
-以下是对上述代码的分析
-  1. 开始自旋
-  2. 获取复合状态
-  3. 拿到当前线程池运行状态
-  4. 判断在必要时检查队列是否为空
-      a. 线程池处于SHUTDOWN时并且有第一个任务时
-      b. 当前线程池为STOP、TIDYING、TERMINATED
-      c. 当前线程池为SHUTDOWN时且任务队列为空时
-      d. 以上三种情况都会返回false
-  5. 开启第二轮自旋（其实第一轮自旋就只是检测运行状态）
-  6. 获取线程数量
-  7. 判断当前线程数量是否超出了最大容量限制或判断当前线程数量是否大于核心线程数或者最大线程数，具体判断是判断核心线程数还是最大线程数取决于调用时传入的core是否为true，如果超出了直接返回false
-  8. CAS增加当前线程数量，更改成功结束自旋
-  9. 重新获取复合状态
-  10. 判断当前线程池状态是否还是运行中，如果不是则跳过第一层自旋的第一次自旋开始第二次
-  11. 创建工作线程
-  12. 获取工作者中的线程对象
-  13. 拿到锁变量
-  14. 尝试获取锁（在操作队列时采取同步措施）
-  15. 获取当前线程池运行状态
-  16. 判断线程池是否在运行状态，否则判断是否是SHUTDOWN状态且传入的任务为空（有时是只启动一个工作线程）
-  17. 判断线程是否是alive状态
-  18. 添加工作线程队列
-  19. 取当前工作线程队列的数量
-  20. 判断是否大于最大线程数量，如果大于则赋值给它
-  21. 设置当前工作者加入线程队列的已添加的标识为true
-  22. 释放锁
-  23. 判断当前工作线程是否已经加入工作线程队列，如果以加入则启动该工作线程，并设置启动标识为true
-  24. 判断工作线程启动标识如果为false则调用addWorkerFailed
-  25. 返回启动标识来决定是否添加成功
 步骤还挺多的，简单的总结一下，首先自旋的去增加工作者线程的数量，然后创建工作者（工作线程），然后涉及到队列的操作获取到锁然后添加到工作线程队列设置标识，如果未添加到线程队列中，该工作线程也不会启动，如果添加了那么启动该工作线程，然后设置启动标识，最后返回启动标识
    
    
@@ -355,24 +316,24 @@ private boolean addWorker(Runnable firstTask, boolean core) {
 从源码中可以看出，将行为委托给了runWorker并将自身实例传递了过去，runWorker是在ThreadPoolExecutor中定义的，其实这里主要是做的职责分离（不理解这个做法也无所谓完全无伤大雅）
 ```java
 final void runWorker(Worker w) {
-    Thread wt = Thread.currentThread(); // 1
-    Runnable task = w.firstTask; // 2
-    w.firstTask = null; // 3
-    w.unlock(); // 4
-    boolean completedAbruptly = true; // 5
+    Thread wt = Thread.currentThread(); //   1. 获取当前线程
+    Runnable task = w.firstTask; // 2. 拿到工作线程中的任务
+    w.firstTask = null; // 3. 将工作线程对象中的任务清空
+    w.unlock(); // 4. unlock设置锁状态，这里主要还是设置状态为可中断
+    boolean completedAbruptly = true; // 5. 设置一个标识，我习惯将这个表示称为“猝死”标识，它主要是标识这个线程是不是正常执行完，是不是意外中断了//或者是执行
     try {
-        while (task != null || (task = getTask()) != null) { // 6
-            w.lock(); // 7
-            if ((runStateAtLeast(ctl.get(), STOP) || // 8
+        while (task != null || (task = getTask()) != null) { // 6. 自旋判断当前任务是否为空，如果为空，则调用getTask拿去一个任务
+            w.lock(); // 7. 获取锁
+            if ((runStateAtLeast(ctl.get(), STOP) || // 8. 判断状态是否是STOP或者被中断了，如果是则发出中断请求
                  (Thread.interrupted() &&
                   runStateAtLeast(ctl.get(), STOP))) &&
                 !wt.isInterrupted())
                 wt.interrupt();
             try {
-                beforeExecute(wt, task); // 9
+                beforeExecute(wt, task); // 9. 方法执行之前的一些Hook函数，说白了该函数啥都没干，留给子类扩展
                 try {
-                    task.run();  // 10
-                    afterExecute(task, null); // 11
+                    task.run();  // 10. 运行任务里面的逻辑
+                    afterExecute(task, null); // 11. 方法执行之后的一些Hook函数
                 } catch (Throwable ex) {
                     afterExecute(task, ex);
                     throw ex;
@@ -380,30 +341,15 @@ final void runWorker(Worker w) {
             } finally {
                 task = null;
                 w.completedTasks++;
-                w.unlock(); // 12
+                w.unlock(); // 12. 解锁
             }
         }
-        completedAbruptly = false; // 13
+        completedAbruptly = false; // 13. 设置“猝死”标识为false没有被猝死233333
     } finally {
-        processWorkerExit(w, completedAbruptly); // 14 
+        processWorkerExit(w, completedAbruptly); // 14. 调用processWorkerExit故名思意，其实其背后就是去删除了workers中的当前退出工作线程对象//和修改数量 
     }
 }
 ```
-  1. 获取当前线程
-  2. 拿到工作线程中的任务
-  3. 将工作线程对象中的任务清空
-  4. unlock设置锁状态，这里主要还是设置状态为可中断
-  5. 设置一个标识，我习惯将这个表示称为“猝死”标识，它主要是标识这个线程是不是正常执行完，是不是意外中断了或者是执行
-  6. 自旋判断当前任务是否为空，如果为空，则调用getTask拿去一个任务
-  7. 获取锁
-  8. 判断状态是否是STOP或者被中断了，如果是则发出中断请求
-  9. 方法执行之前的一些Hook函数，说白了该函数啥都没干，留给子类扩展
-  10. 运行任务里面的逻辑
-  11. 方法执行之后的一些Hook函数
-  12. 解锁
-  13. 设置“猝死”标识为false没有被猝死233333
-  14. 调用processWorkerExit故名思意，其实其背后就是去删除了workers中的当前退出工作线程对象和修改数量
-
 
 
 # 详解ThreadPoolExecutor中getTask()方法
@@ -412,7 +358,7 @@ final void runWorker(Worker w) {
 
 ```java
 private Runnable getTask() {
-    boolean timedOut = false; // 1
+    boolean timedOut = false; //  1. 超时标志
 
     for (;;) {
         int c = ctl.get();
@@ -425,19 +371,19 @@ private Runnable getTask() {
 
         int wc = workerCountOf(c);
 
-        boolean timed = allowCoreThreadTimeOut || wc > corePoolSize; // 2
+        boolean timed = allowCoreThreadTimeOut || wc > corePoolSize; // 2. 定时标志，首先判断是否允许核心线程超时(默认false)然后判断当前线程//池线程数量是否大于核心线程数
 
         if ((wc > maximumPoolSize || (timed && timedOut))
-            && (wc > 1 || workQueue.isEmpty())) { // 3
-            if (compareAndDecrementWorkerCount(c)) // 4
+            && (wc > 1 || workQueue.isEmpty())) { //  3. 判断当前线程池数是否超过了最大线程数 || 当前线程是否是定时并且已经超时 并且 线程数大于//1 或 任务队列为空
+            if (compareAndDecrementWorkerCount(c)) // 4. 线程数减1，返回null
                 return null;
-            continue; // 5
+            continue; // 5. 跳过本轮自旋
         }
 
         try {
             Runnable r = timed ?
                 workQueue.poll(keepAliveTime, TimeUnit.NANOSECONDS) :
-                workQueue.take(); // 6
+                workQueue.take(); // 6. 从队列中拿取任务
             if (r != null)
                 return r;
             timedOut = true;
@@ -447,10 +393,4 @@ private Runnable getTask() {
     }
 }
 ```
-  1. 超时标志
-  2. 定时标志，首先判断是否允许核心线程超时(默认false)然后判断当前线程池线程数量是否大于核心线程数
-  3. 判断当前线程池数是否超过了最大线程数 || 当前线程是否是定时并且已经超时 并且 线程数大于1 或 任务队列为空
-  4. 线程数减1，返回null
-  5. 跳过本轮自旋
-  6. 从队列中拿取任务
 其实所谓的核心线程就是保持它启动后保证在核心线程数内的线程不会挂掉一直在自旋，但如果是设置了allowCoreThreadTimeOut标志为true的话那么就意义不大了
