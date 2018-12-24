@@ -106,8 +106,8 @@ public static void main(String[] args) {
 scheduleWithFixedDelay第一个参数为要调度的任务，第二个参数为首次延迟执行的时间，第三个参数为上一个任务执行结束后执行的间隔时间，第四个参数为时间单位
 
 
-# 详解ThreadPoolExecutor
-> 简要介绍重要的成员变量和几个方法
+# 详解ThreadPoolExecutor成员变量
+> 简要介绍重要的成员变量
 ```java
 public class ThreadPoolExecutor extends AbstractExecutorService {
     private final AtomicInteger ctl = new AtomicInteger(ctlOf(RUNNING, 0));
@@ -164,7 +164,8 @@ public class ThreadPoolExecutor extends AbstractExecutorService {
 
    - ctl
 
-    该变量是一个复合含义的变量，其本身可以看作是一个Integer变量，该变量的高3位代表线程池的状态，那么后29位（从低位往高位数）代表该线程池数量
+    该变量是一个复合含义的变量，其本身可以看作是一个Integer变量，该变量的高3位代表线程池的状态，
+    那么后29位（从低位往高位数）代表该线程池数量
 
    - COUNT_BITS
 
@@ -242,7 +243,8 @@ public class ThreadPoolExecutor extends AbstractExecutorService {
 
    - keepAliveTime
 
-    空闲存活时间，如果线程池中的线程数量比核心线程数量还要多时，并且多出的这些线程都是闲置状态，该变量则是这些闲置状态的线程的存活时间啊
+    空闲存活时间，如果线程池中的线程数量比核心线程数量还要多时，并且多出的这些线程都是闲置状态，
+    该变量则是这些闲置状态的线程的存活时间啊
 
    - allowCoreThreadTimeOut
 
@@ -256,8 +258,8 @@ public class ThreadPoolExecutor extends AbstractExecutorService {
 
     线程池最大线程数量
 
+# 详解ThreadPoolExecutor中execute方法
 
-> execute方法详解
 ```java
 public void execute(Runnable command) {
     if (command == null) // 1
@@ -292,7 +294,8 @@ public void execute(Runnable command) {
   8. 队列添加失败，尝试调用addWorker以非核心线程的方式添加一条非核心线程执行，失败则采用饱和策略拒绝该任务
 从上面的源码可以看到，如果核心线程数量未达到限定范围则会优先创建核心线程来执行该任务，否则将其加入阻塞等待队列中，如果添加至阻塞等待队列中失败后，则尝试创建一个非核心线程来执行该任务如果失败则采用饱和策略，该方法大量都与addWorker方法相关。
 
-> addWorker方法详解
+
+# 详解ThreadPoolExecutor中addWorker方法
 
 ```java
 
@@ -390,7 +393,8 @@ private boolean addWorker(Runnable firstTask, boolean core) {
 步骤还挺多的，简单的总结一下，首先自旋的去增加工作者线程的数量，然后创建工作者（工作线程），然后涉及到队列的操作获取到锁然后添加到工作线程队列设置标识，如果未添加到线程队列中，该工作线程也不会启动，如果添加了那么启动该工作线程，然后设置启动标识，最后返回启动标识
    
    
-> runWorker方法详解
+
+# 详解ThreadPoolExecutor中runWorker方法
 
 从源码中可以看出，将行为委托给了runWorker并将自身实例传递了过去，runWorker是在ThreadPoolExecutor中定义的，其实这里主要是做的职责分离（不理解这个做法也无所谓完全无伤大雅）
 ```java
@@ -445,7 +449,8 @@ final void runWorker(Worker w) {
   14. 调用processWorkerExit故名思意，其实其背后就是去删除了workers中的当前退出工作线程对象和修改数量
 
 
-> getTask()方法详解
+
+# 详解ThreadPoolExecutor中getTask()方法
 
 在getTask方法中除了从阻塞队列中拿去一个任务以外，还有一个作用就是维持当前线程活下去
 
