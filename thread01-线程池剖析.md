@@ -16,6 +16,7 @@ Java的Executors工具类就提供了几种现成的创建线程池实例的方�
     - newSingleThreadPool
     - newCachedThreadPool
     - newScheduledThreadPool
+    
 他们最终的放回值都是返回一个ExecutorService,且内部实际都是调用了ThreadPoolExecutor不同的构造方法。
 
 # newFixedThreadPool
