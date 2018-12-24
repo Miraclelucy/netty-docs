@@ -11,8 +11,7 @@
 线程池的出现主要就是解决2个问题，一个是限制线程的数量和线程复用，在这个扩展上面可以再自行扩展出监控等。
 
 # 线程池的使用
-Java的Executors工具类就提供了几种现成的创建线程池实例的方法()
-
+Java的Executors工具类就提供了几种现成的创建线程池实例的方法：
     - newFixedThreadPool
     - newSingleThreadPool
     - newCachedThreadPool
