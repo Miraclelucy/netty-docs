@@ -162,74 +162,38 @@ public class ThreadPoolExecutor extends AbstractExecutorService {
 ```
 > 成员变量详解
 
-   - ctl
-
-    该变量是一个复合含义的变量，其本身可以看作是一个Integer变量，该变量的高3位代表线程池的状态，
+   - ctl：该变量是一个复合含义的变量，其本身可以看作是一个Integer变量，该变量的高3位代表线程池的状态，
     那么后29位（从低位往高位数）代表该线程池数量
 
-   - COUNT_BITS
+   - COUNT_BITS：数量的位数
 
-    数量的位数
+   - COUNT_MASK：数量位数的掩码
 
-   - COUNT_MASK
+   - RUNNING：表示运行中的状态标识
 
-    数量位数的掩码
+   - SHUTDOWN：表示关闭中的状态标识
 
-   - RUNNING
+   - STOP：表示已停止的状态标识
 
-    表示运行中的状态标识
+   - TIDYING：表示当前所有任务已经终止，任务数量为0时的状态标识
 
-   - SHUTDOWN
+   - TERMINATED：表示线程池已经完全终止（关闭），关于线程池的关闭状态、线程池状态变换
 
-    表示关闭中的状态标识
+   - workQueu：用来保存等待任务执行的阻塞队列
 
-   - STOP
+   - mainLock：可重入锁，方法里面会大量使用，很多变量的操作都需要使用该锁
 
-    表示已停止的状态标识
+   - workers：该集合中包含了所有在工作的线程
 
-   - TIDYING
+   - termination：锁条件队列，主要用于awaitTermination
 
-    表示当前所有任务已经终止，任务数量为0时的状态标识
+   - largestPoolSize：记录线程池最大工作线程的数量（可能是个历史值）
 
-   - TERMINATED
+   - completedTaskCount：完成任务的计时器，仅在中止工作任务时更新
 
-    表示线程池已经完全终止（关闭），关于线程池的关闭状态
+   - threadFactory：用于创建线程的工厂
 
-    线程池状态变换
-
-   - workQueue
-
-    用来保存等待任务执行的阻塞队列
-
-   - mainLock
-
-    可重入锁，方法里面会大量使用，很多变量的操作都需要使用该锁
-
-   - workers
-
-    该集合中包含了所有在工作的线程
-
-   - termination
-
-    锁条件队列，主要用于awaitTermination
-
-   - largestPoolSize
-
-    记录线程池最大工作线程的数量（可能是个历史值）
-
-   - completedTaskCount
-
-    完成任务的计时器，仅在中止工作任务时更新
-
-   - threadFactory
-
-    用于创建线程的工厂
-
-   - handler
-
-    > 饱和策略的回调，当队列已满且线程个数达到maximumPoolSize时采取的策略
-
-    有以下几种策略
+   - handler：饱和策略的回调，当队列已满且线程个数达到maximumPoolSize时采取的策略，有以下几种策略：
 
        - AbortPolicy
 
@@ -241,22 +205,14 @@ public class ThreadPoolExecutor extends AbstractExecutorService {
 
         分别为：抛出异常、使用调用者当前的线程来执行任务、调用队列的poll丢弃一个任务，执行当前任务、默默丢弃该任务。
 
-   - keepAliveTime
-
-    空闲存活时间，如果线程池中的线程数量比核心线程数量还要多时，并且多出的这些线程都是闲置状态，
+   - keepAliveTime：空闲存活时间，如果线程池中的线程数量比核心线程数量还要多时，并且多出的这些线程都是闲置状态，
     该变量则是这些闲置状态的线程的存活时间啊
 
-   - allowCoreThreadTimeOut
+   - allowCoreThreadTimeOut：默认为false，即时是空闲核心线程也会处于活动状态，如果设为true那么核心线程也会遵循keepAliveTime的时间来做闲置处理
 
-    默认为false，即时是空闲核心线程也会处于活动状态，如果设为true那么核心线程也会遵循keepAliveTime的时间来做闲置处理
+   - corePoolSize：线程池核心线程数量
 
-   - corePoolSize
-
-    线程池核心线程数量
-
-   - maximumPoolSize
-
-    线程池最大线程数量
+   - maximumPoolSize：线程池最大线程数量
 
 # 详解ThreadPoolExecutor中execute方法
 
