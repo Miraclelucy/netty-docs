@@ -19,4 +19,4 @@
 3. 装饰模式的特点：
 - 装饰对象包含了一个对真实对象的引用
 - 装饰对象接受来自所有客户端的请求，然后把请求转发给真实的对象
-具体的见[demo](https://github.com/Miraclelucy/deepjava-project/tree/master/src/main/java/designpattern/ch01decorator target="_blank")
+具体的见[demo](https://github.com/Miraclelucy/deepjava-project/tree/master/src/main/java/designpattern/ch01decorator" target="_blank)
