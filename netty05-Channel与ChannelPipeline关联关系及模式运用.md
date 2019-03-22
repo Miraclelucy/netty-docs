@@ -18,6 +18,7 @@
 4. ChannelHandler之间是如何转发的？
 依靠ChannelHandlerContext对象。
 入站事件处理器的传播方法：
+```java
 <li>Inbound event propagation methods:
     <ul>
     <li>{@link ChannelHandlerContext#fireChannelRegistered()}</li>
@@ -31,7 +32,9 @@
     <li>{@link ChannelHandlerContext#fireChannelUnregistered()}</li>
     </ul>
 </li>
+```
 出站事件处理器的传播方法：
+```java
 <li>Outbound event propagation methods:
     <ul>
     <li>{@link ChannelHandlerContext#bind(SocketAddress, ChannelPromise)}</li>
@@ -44,6 +47,7 @@
     <li>{@link ChannelHandlerContext#deregister(ChannelPromise)}</li>
     </ul>
 </li>
+```
 实际中是这样使用的：
 ```java
 public class MyInboundHandler extends {@link ChannelInboundHandlerAdapter} {
