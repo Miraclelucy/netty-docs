@@ -16,7 +16,9 @@ netty中的ChannelFuture：
 - 在ChannelFuture中推荐使用addListener和removeListener的方法，而不推荐使用await()方法。
 因为addListener(GenericFutureListener)是非阻塞的，该方法将ChannelFutureListener对象添加至ChannelFuture上，当与该Future关联的异步I/O操作完成时，I/O线程将通知这些hannelFutureListener。
 3. ChannelFactory：本质是一个ReflectiveChannelFactory,通过反射的方式创建新的NioServerSocketChannel
-4. 下面是服务启动时的核心源码
+4. ChannelPromise：本质是一个ChannelFuture的子类，提供了一些写方法setSuccess，setFailure用来标记异步操作执行成功或者失败，但是这些写操作只能设置一次，第二次再设置将报异常。
+5. ChannelFutureListener的operationComplete方法是由I/O线程执行的，因此要注意的是不要在这里执行耗时的操作，否则需要通过另外的线程或者线程池来执行。
+6. 下面是服务启动时的核心源码
 ```java
 //抽象类AbstractBootstrap中核心代码部分展示
 //核心片段一
