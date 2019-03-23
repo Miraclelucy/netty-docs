@@ -198,7 +198,7 @@ protected void doRegister() throws Exception {
 9. 重要的结论：
 - Netty中Channel的实现是线程安全的；基于此我们可以存储一个Channel的引用，并且在需要向远程端点发送数据时，通过这个引用来调用Channel响应的方法；即便当时有很多线程都在使用它也不会出现多线程问题；而且，消息一定会按照顺序发送出去。
 - 由以上可知，Channel上的那些ChannelHandler的处理全部是在一个线程中处理，这也就是为什么遇到逻辑比较复杂的ChannelHandler一定要单独起一个专门的业务线程池（EventExecutorGroup），否则会造成线程阻塞。业务线程池通常有两种实现方式，如下：
-[1]在ChannelHandler的回调方法中，使用定义的业务线程池，这样就可以实现异步调用。
+- [1]在ChannelHandler的回调方法中，使用定义的业务线程池，这样就可以实现异步调用。
 ```java
 public class MyServerHandler extends SimpleChannelInboundHandler<String> {
     @Override
@@ -223,7 +223,7 @@ public class MyServerHandler extends SimpleChannelInboundHandler<String> {
 
 }
 ```
-[2]借助Netty提供的向ChannelPipeline添加ChnanelHandler时调用的addLast方法来传递EventExecutor：
+- [2]借助Netty提供的向ChannelPipeline添加ChnanelHandler时调用的addLast方法来传递EventExecutor：
 ```java
 static final {@link EventExecutorGroup} group = new {@link DefaultEventExecutorGroup}(16);
 ...
